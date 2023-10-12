@@ -1,7 +1,7 @@
 # Image Local Region Zoom App for Academic Paper Usage
 
 An image local region zoom App to simplify the qualitative comparsion between multiple methods. Specifically, 
-a source image is cropped by dragging colored boxes on it and aligned to its width or height. See examples below.
+a source image is cropped by dragging colored boxes on it and aligned to its width or height. See examples below. This App is implemented with the powerful GPT-3.5.
 
 ![an example, aligned below](src_imgs/example_below.jpg)
 ![an example, aligned right](src_imgs/example_right_multirow.jpg)
@@ -10,10 +10,8 @@ a source image is cropped by dragging colored boxes on it and aligned to its wid
 1. [Features](#features)
 2. [Installation](#installation)
 3. [Usage](#usage)
-
    1. [Example](#example)
    2. [Detail settings](#detail-settings)
-
 4. [Issues & Feedback](#issues--feedback)
 
 ## Features
