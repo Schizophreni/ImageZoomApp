@@ -24,7 +24,7 @@ class ImageZoomApp(QMainWindow):
     def initUI(self):
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
-        self.setGeometry(100, 100, 800, 400)
+        self.setGeometry(100, 100, 850, 600)
         self.setWindowTitle("Image Zoom App")
         self.margin = 6  # left, right, top, bottom side margin
         layout = QVBoxLayout()
@@ -37,6 +37,7 @@ class ImageZoomApp(QMainWindow):
         layout_image.setSpacing(self.margin)
         layout_image.setContentsMargins(self.margin, self.margin, self.margin, self.margin)
         self.widget_image = QLabel(self)
+        self.widget_image.setStyleSheet("background-color:white")
         layout_image.setAlignment(Qt.AlignCenter)
         self.original_image_label = QLabel(self)
         self.original_image_label.setAlignment(Qt.AlignTop)
@@ -82,9 +83,15 @@ class ImageZoomApp(QMainWindow):
         self.grid_label.currentIndexChanged.connect(self.grid_row_changed)
         self.clear_box_button = QPushButton("Clear boxes", self)
         self.clear_box_button.clicked.connect(self.clear_boxes)
+        self.margin_text = QLabel("Margin:")  # margin between image and crops
+        self.margin_label = QComboBox(self)
+        self.margin_label.addItems([str(i) for i in range(0, 21)])
+        self.margin_label.currentIndexChanged.connect(self.margin_changed)
         layout_edit.addWidget(self.grid_text)
         layout_edit.addWidget(self.grid_label)
         layout_edit.addWidget(self.clear_box_button)
+        layout_edit.addWidget(self.margin_text)
+        layout_edit.addWidget(self.margin_label)
         layout_settings.addLayout(layout_edit)
 
         # draw settings
@@ -102,6 +109,10 @@ class ImageZoomApp(QMainWindow):
         self.finetune_label = QCheckBox(self)
         self.finetune_label.stateChanged.connect(self.finetune_mode)
         self.linewidth_label.addItems([str(i) for i in range(1, 9)])
+        self.sub_margin_text = QLabel("Sub margin:")  # margin between crops
+        self.sub_margin_label = QComboBox(self)
+        self.sub_margin_label.addItems([str(i) for i in range(0, 16)])
+        self.sub_margin_label.currentIndexChanged.connect(self.sub_margin_changed)
         self.linewidth_label.currentIndexChanged.connect(self.linewidth_changed)
         layout_draw.addWidget(self.color_text)
         layout_draw.addWidget(self.color_type)
@@ -110,6 +121,8 @@ class ImageZoomApp(QMainWindow):
         layout_draw.addWidget(self.linewidth_label)
         layout_draw.addWidget(self.finetune_text)
         layout_draw.addWidget(self.finetune_label)
+        layout_draw.addWidget(self.sub_margin_text)
+        layout_draw.addWidget(self.sub_margin_label)
         layout_settings.addLayout(layout_draw)
 
         # Fine tune boxes
@@ -234,6 +247,14 @@ class ImageZoomApp(QMainWindow):
         self.update_image()
 
     def grid_row_changed(self):
+        self.zoom_in_boxes()
+        self.update_image()
+
+    def margin_changed(self):
+        self.zoom_in_boxes()
+        self.update_image()
+
+    def sub_margin_changed(self):
         self.zoom_in_boxes()
         self.update_image()
 
@@ -391,6 +412,8 @@ class ImageZoomApp(QMainWindow):
         linewidth = int(self.linewidth_label.currentText())
         self.extra_width = 0  # no extra_width align
         self.extra_height = 0
+        self.main_margin = int(self.margin_label.currentText())
+        self.sub_margin = int(self.sub_margin_label.currentText())
         if self.boxes:
             number_boxes = len(self.boxes)
             num_rows = int(self.grid_label.currentText().split()[0])
@@ -412,11 +435,14 @@ class ImageZoomApp(QMainWindow):
 
                 # Calculate the aspect ratios for all cropped images
                 ratios = sum(image.width() / image.height() for image in self.cropped_images)
-                extra_height = int((self.image.width() - linewidth * box_num_each_row * 2) / ratios)  # extra height for all cropped images below
+                extra_height = int((self.image.width() - linewidth * box_num_each_row * 2
+                                    - self.sub_margin * (box_num_each_row - 1)) / ratios)  # extra height for all cropped images below
                 # Create a new image for displaying the cropped images
-                combined_image = QPixmap(selected_image.width(), selected_image.height() + extra_height + 2 * linewidth)
-                combined_aux_image = QPixmap(aux_image.width(), aux_image.height() + extra_height + 2 * linewidth)
-                self.extra_height += extra_height + 2 * linewidth
+                combined_image = QPixmap(selected_image.width(), selected_image.height() + extra_height
+                                         + 2 * linewidth + self.main_margin)
+                combined_aux_image = QPixmap(aux_image.width(), aux_image.height() + extra_height
+                                             + 2 * linewidth + self.main_margin)
+                self.extra_height += extra_height + 2 * linewidth + self.main_margin
                 combined_image.fill(Qt.white)
                 combined_aux_image.fill(self.original_image_label.palette().color(QPalette.Background))  # fill in with background color
                 x_position = 0
@@ -427,20 +453,22 @@ class ImageZoomApp(QMainWindow):
                     resize_ratio = extra_height / image.height()
                     if crop_idx == box_num_each_row - 1:
                         # last box
-                        image = image.scaled(selected_image.width() - accu_width - 2*box_num_each_row*linewidth, extra_height)
+                        image = image.scaled(selected_image.width() - accu_width - 2*box_num_each_row*linewidth
+                                             - self.sub_margin * (box_num_each_row - 1), extra_height)
                     else:
                         image = image.scaled(QSize(int(resize_ratio * image.width()), extra_height))
                         accu_width += image.width()
-                    painter.drawPixmap(x_position+linewidth, selected_image.height() + linewidth, image)
+                    painter.drawPixmap(x_position+linewidth, selected_image.height()
+                                       + linewidth + self.main_margin, image)
                     # draw boxes
                     pen = QPen()
                     pen.setColor(box_colores[crop_idx])
                     pen.setWidth(linewidth)
                     pen.setJoinStyle(Qt.MiterJoin)
                     painter.setPen(pen)
-                    painter.drawRect(int(x_position + linewidth/2), int(selected_image.height()+linewidth/2),
-                                     image.width() + linewidth, extra_height + linewidth)  # draw if moving mouse
-                    x_position += image.width() + 2 * linewidth
+                    painter.drawRect(int(x_position + linewidth/2), int(selected_image.height()
+                                      + linewidth/2 + self.main_margin), image.width() + linewidth, extra_height + linewidth)  # draw if moving mouse
+                    x_position += image.width() + 2 * linewidth + self.sub_margin
                 painter.drawPixmap(0, 0, selected_image)
                 aux_painter.drawPixmap(0, 0, aux_image)
                 painter.end()
@@ -454,6 +482,8 @@ class ImageZoomApp(QMainWindow):
         linewidth = int(self.linewidth_label.currentText())
         self.extra_width = 0  # no extra_width align
         self.extra_height = 0
+        self.main_margin = int(self.margin_label.currentText())
+        self.sub_margin = int(self.sub_margin_label.currentText())
 
         if self.boxes:
             number_boxes = len(self.boxes)
@@ -476,11 +506,14 @@ class ImageZoomApp(QMainWindow):
 
                 # Calculate the aspect ratios for all cropped images
                 ratios = sum(image.height() / image.width() for image in self.cropped_images)
-                extra_width = int((self.image.height() - linewidth * box_num_each_column * 2) / ratios)  # extra width for all cropped images below
+                extra_width = int((self.image.height() - linewidth * box_num_each_column * 2
+                                   - self.sub_margin * (box_num_each_column - 1)) / ratios)  # extra width for all cropped images below
                 # Create a new image for displaying the cropped images
-                combined_image = QPixmap(selected_image.width() + extra_width + 2 * linewidth, selected_image.height())
-                combined_aux_image = QPixmap(aux_image.width() + extra_width + 2 * linewidth, aux_image.height())
-                self.extra_width += extra_width + 2 * linewidth
+                combined_image = QPixmap(selected_image.width()
+                                         + extra_width + 2 * linewidth + self.main_margin, selected_image.height())
+                combined_aux_image = QPixmap(aux_image.width() + extra_width
+                                         + 2 * linewidth + self.main_margin, aux_image.height())
+                self.extra_width += extra_width + 2 * linewidth + self.main_margin
                 combined_image.fill(Qt.white)
                 combined_aux_image.fill(
                     self.original_image_label.palette().color(QPalette.Background))  # fill in with background color
@@ -492,21 +525,22 @@ class ImageZoomApp(QMainWindow):
                     resize_ratio = extra_width / image.width()
                     if crop_idx == box_num_each_column - 1:
                         # last box
-                        image = image.scaled(extra_width,
-                                             selected_image.height() - accu_height - 2 * box_num_each_column * linewidth)
+                        image = image.scaled(extra_width, selected_image.height() - accu_height
+                                             - 2 * box_num_each_column * linewidth - self.sub_margin * (box_num_each_column - 1))
                     else:
                         image = image.scaled(QSize(extra_width, int(resize_ratio * image.height())))
                         accu_height += image.height()
-                    painter.drawPixmap(selected_image.width() + linewidth, y_position + linewidth, image)
+                    painter.drawPixmap(selected_image.width() + linewidth + self.main_margin,
+                                       y_position + linewidth, image)
                     # draw boxes
                     pen = QPen()
                     pen.setColor(box_colores[crop_idx])
                     pen.setWidth(linewidth)
                     pen.setJoinStyle(Qt.MiterJoin)
                     painter.setPen(pen)
-                    painter.drawRect(int(selected_image.width() + linewidth / 2), int(y_position + linewidth / 2),
-                                     extra_width + linewidth, image.height() + linewidth)  # draw if moving mouse
-                    y_position += image.height() + 2 * linewidth
+                    painter.drawRect(int(selected_image.width() + linewidth / 2 + self.main_margin),
+                                     int(y_position + linewidth / 2), extra_width + linewidth, image.height() + linewidth)  # draw if moving mouse
+                    y_position += image.height() + 2 * linewidth + self.sub_margin
                 painter.drawPixmap(0, 0, selected_image)
                 aux_painter.drawPixmap(0, 0, aux_image)
                 painter.end()
