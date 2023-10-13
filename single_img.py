@@ -187,7 +187,7 @@ class ImageZoomApp(QMainWindow):
                 self.selected_image.save(file_path, "PNG")
 
     def save_as_pdf(self):
-        if self.image:
+        if self.selected_image:
             file_path, _ = QFileDialog.getSaveFileName(self, "Save Image as PDF", "", "PDF Files (*.pdf)")
             if file_path:
                 printer = QPrinter()
@@ -195,14 +195,14 @@ class ImageZoomApp(QMainWindow):
                 printer.setOutputFileName(file_path)
 
                 # Set page size to match the image size
-                image_size = self.image.size()
+                image_size = self.selected_image.size()
                 printer.setPageSize(QPrinter.Custom)
                 printer.setPaperSize(QSizeF(image_size), QPrinter.DevicePixel)
                 printer.setFullPage(True)
 
                 painter = QPainter(printer)
                 painter.setRenderHint(QPainter.Antialiasing)
-                painter.drawPixmap(0, 0, self.image)
+                painter.drawPixmap(0, 0, self.selected_image)
                 painter.end()
 
     def resizeEvent(self, QResizeEvent):
