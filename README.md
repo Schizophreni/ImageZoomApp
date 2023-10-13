@@ -1,4 +1,4 @@
-# Image Local Region Zoom App for Academic Paper Usage
+# ZoomtoCompare: Image Local Region Zoom App for Academic Paper Usage
 
 An image local region zoom App to simplify the qualitative comparsion between multiple methods. Specifically, 
 a source image is cropped by dragging colored boxes on it and aligned to its width or height. See examples below. This App is implemented with the help of
