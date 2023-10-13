@@ -57,6 +57,8 @@ After done, draw freely
 - Change the box linewidth: click the `Line width` combobox and all boxes' linewidth will change
 - Finetune the box for better visualization: first click the `Finetune box` checkbox, and then manually input alter the 
 (x, y, w, h) values. Boxes will be automatically changed with respect to your input.
+- Set margin: choose the `Margin` combobox to set the margin between original image and 
+crops; choose the `Sub margin` combobox to tune the margin between adajacent crops
 
 ## Issues & Feedback
 Feel free to raise your issues, when any bug occurs. We welcome your constructive suggestions.
